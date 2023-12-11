@@ -303,11 +303,10 @@
 
 <style>
   .outer {
-    --с-white: #fff;
-    --с-yellow: #ffdd2d;
-    --c-grey: #5f5f5f
-    --c-black: #000;
-    --c-letter: #fff;
+    --c-white: #ffffff;
+    --c-yellow: #ffdd2d;
+    --c-grey: #5f5f5f;
+    --c-black: #000000;
 
     background-color: #1c1c1e;
     min-height: 100dvh;
@@ -324,7 +323,7 @@
   }
 
   .suggestions {
-    color: var(--c-letter);
+    color: var(--c-white);
   }
 
   .list {
@@ -352,7 +351,7 @@
     width: 62px;
     height: 66px;
     text-align: center;
-    border: 1px solid var(--с-yellow);
+    border: 1px solid var(--c-yellow);
     border-radius: 6px;
     background-color: transparent;
     outline: none;
