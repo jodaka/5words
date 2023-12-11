@@ -1,6 +1,5 @@
 <script lang="ts">
   import { dict as WORDS } from './dict';
-  //https://github.com/Harrix/Russian-Nouns/blob/main/dist/russian_nouns.txt
   type Dict = string[];
 
   enum GRID_STATES {
@@ -241,93 +240,99 @@
     return res;
   };
 
-  let limits: any = {};
-  let wordsSuggestions: string[] = [];
-
-  $: limits = calculateLimits(gridValues);
-  $: wordsSuggestions = getWordsSuggestions(WORDS, limits, 25);
-
+  let limits: ILimits = calculateLimits(gridValues);
+  let wordsSuggestions: string[] = getWordsSuggestions(WORDS, limits, 25);
+  let hasWords: boolean = Boolean(limits?.withLetters?.size || limits?.withoutLetters?.size);
   let initialSuggestions = getInitialSuggestions(WORDS);
+
+  $: {
+    limits = calculateLimits(gridValues);
+    wordsSuggestions = getWordsSuggestions(WORDS, limits, 25);
+    hasWords = Boolean(limits?.withLetters?.size || limits?.withoutLetters?.size);
+  }
 </script>
 
-<main class="wrapper">
-  <div class="grid">
-    {#each gridValues as gridWord, wordIndex (wordIndex)}
-      {#each gridWord as gridCell, cellIndex (cellIndex)}
-        <input
-          on:click={() => toggleState(gridCell)}
-          on:keydown={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
-          class="gridInput"
-          id={`cell_${wordIndex * 5 + cellIndex}`}
-          class:gridInput--absent={gridCell.state === GRID_STATES.absent ||
-            (gridCell.state === GRID_STATES.empty && gridCell.value !== '')}
-          class:gridInput--inplace={gridCell.state === GRID_STATES.inplace}
-          class:gridInput--exists={gridCell.state === GRID_STATES.exists}
-          type="text"
-          maxlength="1"
-          bind:value={gridCell.value}
-        />
+<main class="outer">
+  <div class="inner">
+    <div class="grid">
+      {#each gridValues as gridWord, wordIndex (wordIndex)}
+        {#each gridWord as gridCell, cellIndex (cellIndex)}
+          <input
+            on:click={() => toggleState(gridCell)}
+            on:keydown={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
+            class="gridInput"
+            id={`cell_${wordIndex * 5 + cellIndex}`}
+            class:gridInput--absent={gridCell.state === GRID_STATES.absent ||
+              (gridCell.state === GRID_STATES.empty && gridCell.value !== '')}
+            class:gridInput--inplace={gridCell.state === GRID_STATES.inplace}
+            class:gridInput--exists={gridCell.state === GRID_STATES.exists}
+            type="text"
+            maxlength="1"
+            bind:value={gridCell.value}
+          />
+        {/each}
       {/each}
-    {/each}
+    </div>
+
+    {#if hasWords}
+      <div class="suggestions">
+        <h3>Варианты:</h3>
+        <ul class="list">
+          {#each wordsSuggestions as suggestion}
+            <li>{suggestion}</li>
+          {/each}
+        </ul>
+        {#if !wordsSuggestions.length}
+          сорян
+        {/if}
+      </div>
+    {/if}
+
+    {#if initialSuggestions.length && !hasWords}
+      <div class="suggestions">
+        <h3>Начальные варианты:</h3>
+        <ul class="list">
+          {#each initialSuggestions as suggestion}
+            <li>{suggestion}</li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
   </div>
-
-  {#if wordsSuggestions.length}
-    <ul class="suggestions">
-      <h3>Варианты варианты:</h3>
-      {#each wordsSuggestions as suggestion}
-        <li>{suggestion}</li>
-      {/each}
-    </ul>
-  {/if}
-
-  {#if initialSuggestions.length}
-    <ul class="suggestions">
-      <h3>Начальные варианты:</h3>
-      {#each initialSuggestions as suggestion}
-        <li>{suggestion}</li>
-      {/each}
-    </ul>
-  {/if}
 </main>
 
 <style>
-  .wrapper {
-    background-color: #282830;
+  .outer {
+    --с-white: #fff;
+    --с-yellow: #ffdd2d;
+    --c-grey: #5f5f5f
+    --c-black: #000;
+    --c-letter: #fff;
+
+    background-color: #1c1c1e;
     min-height: 100dvh;
 
-    --color-white: #fff;
-    --color-yellow: #ffdd2d;
-    --color-yellow-hover: #ffcd33;
-    --color-yellow-active: #fab619;
-    --color-gray: #9299a2;
-    --app-background: #1c1c1e;
-    --modal-background: #2c2c2e;
-    --dark-button-color: #2c2c2e;
-    --letter-color: #fff;
-    --letter-correct-color: #000;
-    --letter-present-color: #000;
-    --letter-absent-color: #fff;
-    --leter-border-color: var(--color-yellow);
-    --letter-correct-border-color: var(--color-yellow);
-    --letter-present-border-color: #fff;
-    --letter-absent-border-color: #5f5f5f;
-    --letter-correct-background: var(--color-yellow);
-    --letter-present-background: #fff;
-    --letter-absent-background: #5f5f5f;
-
-    display: grid;
-    grid-template-columns: min-content min-content;
-    grid-template-rows: min-content;
-    margin: 0 auto;
-
+    display: flex;
+    align-items: center;
     justify-content: center;
   }
 
+  .inner {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
   .suggestions {
-    color: var(--letter-color);
-    padding: 0 1rem;
+    color: var(--c-letter);
+  }
+
+  .list {
     margin: 0;
+    padding: 0;
     list-style: none;
+    columns: 3;
+    column-gap: 35px;
   }
 
   .suggestions h3 {
@@ -336,55 +341,56 @@
 
   .suggestions li {
     font-family: monospace;
-    letter-spacing: 0.1rem;
+    letter-spacing: 0.5rem;
     text-transform: uppercase;
+    padding-bottom: 0.7rem;
+    font-size: 16px;
   }
 
   .gridInput {
+    font-family: -apple-system, system-ui, 'system-ui', 'Segoe UI', Roboto, Helvetica, Arial, Ubuntu, sans-serif;
     width: 62px;
     height: 66px;
     text-align: center;
-    border: 1px solid var(--color-yellow);
+    border: 1px solid var(--с-yellow);
     border-radius: 6px;
     background-color: transparent;
     outline: none;
     color: white;
-    font-size: 1.6rem;
+    font-size: 2rem;
+    font-weight: 400;
     user-select: none;
     text-transform: capitalize;
   }
 
   .gridInput--absent {
-    background: var(--letter-absent-background);
-    border-color: var(--letter-absent-border-color);
-    color: var(--letter-absent-color);
+    background: var(--c-grey);
+    border-color: var(--c-grey);
+    color: var(--c-white);
   }
 
   .gridInput--inplace {
-    background: var(--letter-correct-background);
-    border-color: var(--letter-correct-border-color);
-    color: var(--letter-correct-color);
+    background: var(--c-yellow);
+    border-color: var(--c-yellow);
+    color: var(--c-black);
   }
 
   .gridInput--exists {
-    background: var(--letter-present-background);
-    border-color: var(--letter-present-border-color);
-    color: var(--letter-present-color);
+    background: var(--c-white);
+    border-color: var(--c-white);
+    color: var(--c-black);
   }
 
   .grid {
-    margin: 0 auto;
+    font-family: -apple-system, system-ui, 'system-ui', 'Segoe UI', Roboto, Helvetica, Arial, Ubuntu, sans-serif;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-    gap: 10px;
+    gap: 8px 6px;
     width: fit-content;
     height: fit-content;
   }
 
   * {
     box-sizing: border-box;
-  }
-
-  @media only screen and (min-device-width: 320px) and (max-device-width: 480px) {
   }
 </style>
