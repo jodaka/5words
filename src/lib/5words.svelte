@@ -1,6 +1,6 @@
 <script lang="ts">
   import { dict as WORDS } from './dict';
-
+  //https://github.com/Harrix/Russian-Nouns/blob/main/dist/russian_nouns.txt
   type Dict = string[];
 
   enum GRID_STATES {
@@ -20,30 +20,39 @@
   interface ILimits {
     positionsPositive: LetterLimit;
     positionsNegative: LetterLimit;
-    withoutLetters: string[];
-    withLetters: string[];
+    withoutLetters: Set<string>;
+    withLetters: Set<string>;
   }
 
   const getWordsSuggestions = (
     dict: Dict,
-    { positionsPositive = {}, positionsNegative = {}, withoutLetters = [], withLetters = [] }: ILimits
+    { positionsPositive, positionsNegative, withoutLetters, withLetters }: ILimits,
+    count = 25
   ) => {
-    const withoutLettersSet = new Set(withoutLetters);
+    if (!withLetters.size && !withoutLetters.size) {
+      return [];
+    }
 
-    return dict.filter((word) => {
+    const res: string[] = [];
+
+    let i = 0;
+    mainLoop: while (i < dict.length && res.length < count) {
+      const word = dict[i];
+      i++;
+
       const letters: string[] = word.split('');
+      const lettersSet = new Set(letters);
 
       // проверка на обязательные буквы
-      for (let i = 0; i < withLetters.length; i++) {
-        if (!letters.includes(withLetters[i])) {
-          return false;
+      for (const withLetter of withLetters) {
+        if (!lettersSet.has(withLetter)) {
+          continue mainLoop;
         }
       }
 
-      // проверка на запрещённые буквы
-      for (let i: number = 0; i <= 4; i++) {
-        if (withoutLettersSet.has(letters[i])) {
-          return false;
+      for (const withoutLetter of withoutLetters) {
+        if (lettersSet.has(withoutLetter)) {
+          continue mainLoop;
         }
       }
 
@@ -61,13 +70,34 @@
         for (let negativePosIndex = negativeLetterPositions.length - 1; negativePosIndex >= 0; negativePosIndex--) {
           const negativePos = negativeLetterPositions[negativePosIndex];
           if (letters[negativePos - 1] === negativeLetter) {
-            return false;
+            continue mainLoop;
           }
         }
       }
 
-      return true;
-    });
+      // проверка на отсутствие букв по указанным позициям
+      const positiveLetters = Object.keys(positionsPositive);
+      for (let i = positiveLetters.length - 1; i >= 0; i--) {
+        const positiveLetter = positiveLetters[i];
+        const rawValue = positionsPositive[positiveLetter];
+        const positiveLetterPositions = Array.isArray(rawValue)
+          ? rawValue
+          : typeof rawValue === 'number'
+          ? [rawValue]
+          : Array.from(rawValue);
+
+        for (let positivePosIndex = positiveLetterPositions.length - 1; positivePosIndex >= 0; positivePosIndex--) {
+          const positivePos = positiveLetterPositions[positivePosIndex];
+          if (letters[positivePos - 1] !== positiveLetter) {
+            continue mainLoop;
+          }
+        }
+      }
+
+      res.push(word);
+    }
+
+    return res;
   };
 
   const getInitialSuggestions = (dict: Dict = [], count = 10) => {
@@ -88,7 +118,7 @@
   };
 
   // Начальное состояние
-  let gridValues: IGridCell[][] = new Array(5).fill(null).map(() =>
+  let gridValues: IGridCell[][] = new Array(6).fill(null).map(() =>
     new Array(5).fill(null).map(
       (): IGridCell => ({
         state: GRID_STATES.empty,
@@ -105,9 +135,11 @@
     }
   };
 
-  const toggleState = (gridCell: IGridCell): void => {
+  const toggleState = (gridCell: IGridCell, toggleOnlyEmptyState: boolean = false): void => {
     if (gridCell.value === '') {
       gridCell.state = GRID_STATES.empty;
+    } else if (toggleOnlyEmptyState) {
+      gridCell.state = GRID_STATES.absent;
     } else {
       switch (gridCell.state) {
         case GRID_STATES.empty:
@@ -128,8 +160,6 @@
   };
 
   const onKeyDown = (evt: KeyboardEvent, gridCell: IGridCell, cellIndex: number): void => {
-    console.log(evt.code, cellIndex, gridCell);
-
     if (evt.code === 'ArrowLeft') {
       if (cellIndex > 0) {
         focusInput(cellIndex - 1);
@@ -153,7 +183,7 @@
       if (cellIndex > 0) {
         focusInput(cellIndex - 1);
       }
-      toggleState(gridCell);
+      toggleState(gridCell, true);
       return;
     }
 
@@ -161,7 +191,7 @@
       evt.preventDefault();
       gridCell.value = evt.key;
       focusInput(cellIndex + 1);
-      toggleState(gridCell);
+      toggleState(gridCell, true);
       return;
     }
   };
@@ -183,16 +213,16 @@
               break;
             case GRID_STATES.inplace:
               withLetters.add(letter.value);
-              if (!positionsPositive[letter.value]) {
+              if (!positionsPositive.hasOwnProperty(letter.value)) {
                 positionsPositive[letter.value] = new Set();
               }
               positionsPositive[letter.value].add(letterIndex + 1);
               break;
-              break;
+
             case GRID_STATES.exists:
               withLetters.add(letter.value);
 
-              if (!positionsNegative[letter.value]) {
+              if (!positionsNegative.hasOwnProperty(letter.value)) {
                 positionsNegative[letter.value] = new Set();
               }
               positionsNegative[letter.value].add(letterIndex + 1);
@@ -202,19 +232,20 @@
       }
     });
 
-    return {
-      withLetters: Array.from(withLetters),
-      withoutLetters: Array.from(withoutLetters),
+    const res: ILimits = {
+      withLetters,
+      withoutLetters,
       positionsNegative,
       positionsPositive
     };
+    return res;
   };
 
   let limits: any = {};
   let wordsSuggestions: string[] = [];
 
   $: limits = calculateLimits(gridValues);
-  $: wordsSuggestions = getWordsSuggestions(WORDS, limits);
+  $: wordsSuggestions = getWordsSuggestions(WORDS, limits, 25);
 
   let initialSuggestions = getInitialSuggestions(WORDS);
 </script>
@@ -240,20 +271,23 @@
     {/each}
   </div>
 
-  <div class="debug">
-    {JSON.stringify(gridValues, null, 2)}
-  </div>
+  {#if wordsSuggestions.length}
+    <ul class="suggestions">
+      <h3>Варианты варианты:</h3>
+      {#each wordsSuggestions as suggestion}
+        <li>{suggestion}</li>
+      {/each}
+    </ul>
+  {/if}
 
-  <ul class="suggestions">
-    {JSON.stringify(limits, null, 2)}
-    {JSON.stringify(wordsSuggestions)}
-  </ul>
-
-  <ul class="suggestions">
-    {#each initialSuggestions as suggestion}
-      <li>{suggestion}</li>
-    {/each}
-  </ul>
+  {#if initialSuggestions.length}
+    <ul class="suggestions">
+      <h3>Начальные варианты:</h3>
+      {#each initialSuggestions as suggestion}
+        <li>{suggestion}</li>
+      {/each}
+    </ul>
+  {/if}
 </main>
 
 <style>
@@ -282,20 +316,28 @@
     --letter-absent-background: #5f5f5f;
 
     display: grid;
-    grid-template-columns: 3fr 1fr 1fr;
+    grid-template-columns: min-content min-content;
+    grid-template-rows: min-content;
+    margin: 0 auto;
+
+    justify-content: center;
   }
 
   .suggestions {
-    /* display: flex; */
     color: var(--letter-color);
-    padding: 1rem;
+    padding: 0 1rem;
+    margin: 0;
+    list-style: none;
   }
 
-  .debug {
-    white-space: pre;
-    border: 1px solid red;
-    overflow: scroll;
-    color: var(--letter-color);
+  .suggestions h3 {
+    margin-top: 0;
+  }
+
+  .suggestions li {
+    font-family: monospace;
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
   }
 
   .gridInput {
@@ -334,11 +376,9 @@
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-    max-width: 600px;
     gap: 10px;
     width: fit-content;
     height: fit-content;
-    user-select: none;
   }
 
   * {
