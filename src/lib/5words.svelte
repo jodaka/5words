@@ -159,21 +159,26 @@
   };
 
   const onKeyDown = (evt: KeyboardEvent, gridCell: IGridCell, cellIndex: number): void => {
-    if (evt.code === 'ArrowLeft') {
+
+    if (['Alt', 'Meta', 'Shift', 'Control'].includes(evt.key)) {
+      return;
+    }
+
+    if (evt.key === 'ArrowLeft') {
       if (cellIndex > 0) {
         focusInput(cellIndex - 1);
       }
       return;
     }
 
-    if (evt.code === 'ArrowRight') {
+    if (evt.key === 'ArrowRight') {
       if (cellIndex < 24) {
         focusInput(cellIndex + 1);
       }
       return;
     }
 
-    if (evt.code === 'Backspace') {
+    if (evt.key === 'Backspace') {
       evt.preventDefault();
 
       if (gridCell.value !== '') {
@@ -259,7 +264,7 @@
         {#each gridWord as gridCell, cellIndex (cellIndex)}
           <input
             on:click={() => toggleState(gridCell)}
-            on:keydown={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
+            on:keyup={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
             class="gridInput"
             id={`cell_${wordIndex * 5 + cellIndex}`}
             class:gridInput--absent={gridCell.state === GRID_STATES.absent ||
