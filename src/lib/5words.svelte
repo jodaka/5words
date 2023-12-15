@@ -154,12 +154,22 @@
           gridCell.state = GRID_STATES.empty;
           break;
       }
+
+      const newState = gridCell.state;
+      const newStateLetter = gridCell.value;
+
+      gridValues.forEach((row) =>
+        row.forEach((cell) => {
+          if (cell.value === newStateLetter) {
+            cell.state = newState;
+          }
+        })
+      );
     }
     gridValues = gridValues;
   };
 
   const onKeyDown = (evt: KeyboardEvent, gridCell: IGridCell, cellIndex: number): void => {
-
     if (['Alt', 'Meta', 'Shift', 'Control'].includes(evt.key)) {
       return;
     }
