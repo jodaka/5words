@@ -134,7 +134,7 @@
     }
   };
 
-  const toggleState = (gridCell: IGridCell, toggleOnlyEmptyState: boolean = false): void => {
+  const toggleState = (gridCell: IGridCell, cellIndex: number, toggleOnlyEmptyState: boolean = false): void => {
     if (gridCell.value === '') {
       gridCell.state = GRID_STATES.empty;
     } else if (toggleOnlyEmptyState) {
@@ -159,8 +159,8 @@
       const newStateLetter = gridCell.value;
 
       gridValues.forEach((row) =>
-        row.forEach((cell) => {
-          if (cell.value === newStateLetter) {
+        row.forEach((cell, cellIdx) => {
+          if (cell.value === newStateLetter && cellIdx === cellIndex) {
             cell.state = newState;
           }
         })
@@ -197,7 +197,7 @@
       if (cellIndex > 0) {
         focusInput(cellIndex - 1);
       }
-      toggleState(gridCell, true);
+      toggleState(gridCell, cellIndex, true);
       return;
     }
 
@@ -205,7 +205,7 @@
       evt.preventDefault();
       gridCell.value = evt.key;
       focusInput(cellIndex + 1);
-      toggleState(gridCell, true);
+      toggleState(gridCell, cellIndex, true);
       return;
     }
   };
@@ -273,7 +273,7 @@
       {#each gridValues as gridWord, wordIndex (wordIndex)}
         {#each gridWord as gridCell, cellIndex (cellIndex)}
           <input
-            on:click={() => toggleState(gridCell)}
+            on:click={() => toggleState(gridCell, cellIndex)}
             on:keyup={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
             class="gridInput"
             id={`cell_${wordIndex * 5 + cellIndex}`}
