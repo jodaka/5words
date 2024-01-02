@@ -134,6 +134,18 @@
     }
   };
 
+  const reuseExistingState = (gridCell: IGridCell, cellIndex: number) => {
+    const rowCellIndex = cellIndex % 5;
+
+    gridValues.forEach((row) =>
+      row.forEach((cell, cellIdx) => {
+        if (cell.state === GRID_STATES.inplace && cell.value === gridCell.value && cellIdx === rowCellIndex) {
+          gridCell.state = cell.state;
+        }
+      })
+    );
+  };
+
   const toggleState = (gridCell: IGridCell, cellIndex: number, toggleOnlyEmptyState: boolean = false): void => {
     if (gridCell.value === '') {
       gridCell.state = GRID_STATES.empty;
@@ -157,16 +169,28 @@
 
       const newState = gridCell.state;
       const newStateLetter = gridCell.value;
+      const rowCellIndex = cellIndex % 5;
 
       gridValues.forEach((row) =>
         row.forEach((cell, cellIdx) => {
-          if (cell.value === newStateLetter && cellIdx === cellIndex) {
+          if (cell.value === newStateLetter && cellIdx === rowCellIndex) {
             cell.state = newState;
           }
         })
       );
     }
     gridValues = gridValues;
+  };
+
+  const onInput = (evt: InputEvent, gridCell: IGridCell, cellIndex: number): void => {
+    if (cellIndex < 24) {
+      evt.preventDefault();
+      gridCell.value = evt.data || '';
+      gridCell.state = GRID_STATES.empty;
+      focusInput(cellIndex + 1);
+      reuseExistingState(gridCell, cellIndex);
+      return;
+    }
   };
 
   const onKeyDown = (evt: KeyboardEvent, gridCell: IGridCell, cellIndex: number): void => {
@@ -197,14 +221,6 @@
       if (cellIndex > 0) {
         focusInput(cellIndex - 1);
       }
-      toggleState(gridCell, cellIndex, true);
-      return;
-    }
-
-    if (cellIndex < 24) {
-      evt.preventDefault();
-      gridCell.value = evt.key;
-      focusInput(cellIndex + 1);
       toggleState(gridCell, cellIndex, true);
       return;
     }
@@ -274,7 +290,8 @@
         {#each gridWord as gridCell, cellIndex (cellIndex)}
           <input
             on:click={() => toggleState(gridCell, cellIndex)}
-            on:keyup={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
+            on:input={(evt) => onInput(evt, gridCell, wordIndex * 5 + cellIndex)}
+            on:keydown={(evt) => onKeyDown(evt, gridCell, wordIndex * 5 + cellIndex)}
             class="gridInput"
             id={`cell_${wordIndex * 5 + cellIndex}`}
             class:gridInput--absent={gridCell.state === GRID_STATES.absent ||
