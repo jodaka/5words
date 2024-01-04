@@ -186,7 +186,7 @@
     if (cellIndex < 24) {
       evt.preventDefault();
       gridCell.value = evt.data || '';
-      gridCell.state = GRID_STATES.empty;
+      gridCell.state = GRID_STATES.absent;
       focusInput(cellIndex + 1);
       reuseExistingState(gridCell, cellIndex);
       return;
